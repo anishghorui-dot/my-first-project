@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process name="OrderProcessing" description="Sample order processing workflow">
+    <processVariables>
+        <variable name="orderData" type="Order"/>
+        <variable name="customerInfo" type="Customer"/>
+        <variable name="totalAmount" type="decimal"/>
+    </processVariables>
+    
+    <activities>
+        <activity name="GetCustomerInfo" type="Mapper">
+            <mapping target="customerName" expression="//Order/Customer/@name"/>
+            <mapping target="customerId" expression="//Order/Customer/@id"/>
+            <mapping target="customerType" expression="//Order/Customer/@type"/>
+        </activity>
+        
+        <activity name="CalculateTotal" type="Mapper">
+            <mapping target="total" expression="sum(//Order/Items/Item/Price)"/>
+            <mapping target="itemCount" expression="count(//Order/Items/Item)"/>
+        </activity>
+        
+        <activity name="ValidateOrder" type="Condition">
+            <config>$orderData/Order/TotalAmount > 1000</config>
+        </activity>
+        
+        <activity name="FormatCustomerName" type="Mapper">
+            <mapping expression="concat($customerInfo/FirstName, ' ', $customerInfo/LastName)"/>
+        </activity>
+        
+        <activity name="CheckPremiumCustomer" type="Condition">
+            <config>//Customer[@type='premium']</config>
+        </activity>
+        
+        <activity name="GetFirstItem" type="Mapper">
+            <mapping expression="//Order/Items/Item[1]/Name"/>
+        </activity>
+        
+        <activity name="ExtractProductCode" type="Mapper">
+            <mapping expression="substring(//Product/SKU, 1, 5)"/>
+        </activity>
+    </activities>
+    
+    <transitions>
+        <transition from="Start" to="GetCustomerInfo"/>
+        <transition from="GetCustomerInfo" to="ValidateOrder" condition="$orderData/Order/Status = 'Active'"/>
+        <transition from="ValidateOrder" to="CalculateTotal" condition="//Order/Items/Item[Price > 100]"/>
+        <transition from="CalculateTotal" to="End"/>
+    </transitions>
+</process>
